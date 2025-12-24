@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Action
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linter
+      run: npm run lint
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Build action
+      run: npm run build
+    
+    - name: Package action
+      run: npm run package
+
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Create test Maven project
+      run: |
+        mkdir test-project
+        cd test-project
+        cat > pom.xml << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <project xmlns="http://maven.apache.org/POM/4.0.0"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>com.example</groupId>
+            <artifactId>test-project</artifactId>
+            <version>1.0.0</version>
+            <packaging>jar</packaging>
+            
+            <properties>
+                <maven.compiler.source>17</maven.compiler.source>
+                <maven.compiler.target>17</maven.compiler.target>
+                <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+            </properties>
+            
+            <dependencies>
+                <dependency>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                    <version>4.13.2</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </project>
+        EOF
+        
+        mkdir -p src/main/java/com/example
+        cat > src/main/java/com/example/App.java << 'EOF'
+        package com.example;
+        
+        public class App {
+            public static void main(String[] args) {
+                System.out.println("Hello World!");
+            }
+            
+            public String getMessage() {
+                return "Hello World!";
+            }
+        }
+        EOF
+        
+        mkdir -p src/test/java/com/example
+        cat > src/test/java/com/example/AppTest.java << 'EOF'
+        package com.example;
+        
+        import org.junit.Test;
+        import static org.junit.Assert.*;
+        
+        public class AppTest {
+            @Test
+            public void testGetMessage() {
+                App app = new App();
+                assertEquals("Hello World!", app.getMessage());
+            }
+        }
+        EOF
+    
+    - name: Test Maven Build Action - Compile
+      uses: ./
+      with:
+        operation: 'compile'
+        working-directory: 'test-project'
+        java-version: '17'
+        cache-enabled: true
+    
+    - name: Test Maven Build Action - Test
+      uses: ./
+      with:
+        operation: 'test'
+        working-directory: 'test-project'
+        java-version: '17'
+        publish-test-results: true
+    
+    - name: Test Maven Build Action - Package
+      uses: ./
+      with:
+        operation: 'package'
+        working-directory: 'test-project'
+        java-version: '17'
+        skip-tests: false
+        cache-enabled: true

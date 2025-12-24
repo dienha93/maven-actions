@@ -1,0 +1,74 @@
+name: 'Maven Build Action'
+description: 'A comprehensive Maven action for build, test, and deploy operations'
+author: 'Dien Ha'
+
+branding:
+  icon: 'package'
+  color: 'orange'
+
+inputs:
+  maven-version:
+    description: 'Maven version to use'
+    required: false
+    default: '3.9.5'
+  
+  java-version:
+    description: 'Java version to use'
+    required: false
+    default: '17'
+  
+  java-distribution:
+    description: 'Java distribution to use'
+    required: false
+    default: 'temurin'
+  
+  maven-args:
+    description: 'Additional Maven arguments'
+    required: false
+    default: ''
+  
+  operation:
+    description: 'Maven operation(s) to perform. Single operation (e.g., "package") or comma-separated sequence (e.g., "clean,compile,test,package")'
+    required: true
+    default: 'package'
+  
+  environment-variables:
+    description: 'Custom environment variables as JSON object or key=value pairs (one per line or semicolon-separated)'
+    required: false
+    default: '{}'
+  
+  working-directory:
+    description: 'Working directory for Maven commands'
+    required: false
+    default: '.'
+  
+  settings-file:
+    description: 'Path to Maven settings.xml file'
+    required: false
+    default: ''
+  
+  cache-enabled:
+    description: 'Enable Maven dependency caching'
+    required: false
+    default: 'true'
+
+outputs:
+  status:
+    description: 'Build status (success, failure)'
+  
+  artifact-path:
+    description: 'Path to generated artifacts'
+  
+  build-time:
+    description: 'Total build time in seconds'
+  
+  java-version:
+    description: 'Java version used in build'
+  
+  maven-version:
+    description: 'Maven version used in build'
+  
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
