@@ -93,19 +93,6 @@ jobs:
 | `java-version` | Java version used in build |
 | `maven-version` | Maven version used in build |
 
-## Multi-Operation Support
-
-The action supports executing multiple Maven operations in sequence by providing a comma-separated list:
-
-```yaml
-- name: Full Build Pipeline
-  uses: dienha93/maven-actions@v1.0.0
-  with:
-    operation: 'clean,compile,test,package,verify'
-```
-
-This will execute each operation in order, stopping if any operation fails.
-
 ## Caching
 
 Maven dependencies are automatically cached to improve build performance:
