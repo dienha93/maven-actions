@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const tc = require('@actions/tool-cache');
 const path = require('path');
-
 /**
  * Manages Java and Maven installation and version verification
  */
@@ -15,7 +14,7 @@ class EnvironmentManager {
 
     // Supported versions (should match input-validator.js)
     this.supportedJavaVersions = ['8', '11', '17', '21', '25'];
-    this.supportedJavaDistributions = ['oracle', 'corretto'];
+    this.supportedJavaDistributions = ['oracle', 'corretto', 'temurin'];
     this.supportedMavenVersions = ['3.6.3', '3.8.1', '3.8.6', '3.9.0', '3.9.5', '3.9.6'];
   }
 
@@ -201,10 +200,14 @@ class EnvironmentManager {
 
       // Try to get vendor info
       const vendorMatch = javaVersion.match(
-        /Runtime Environment (OpenJDK|Oracle|Eclipse Temurin|Zulu|AdoptOpenJDK|Liberica|Microsoft|Corretto)/i
+        /Runtime Environment (OpenJDK|Oracle|Eclipse Temurin|Temurin|Zulu|AdoptOpenJDK|Liberica|Microsoft|Corretto)/i
       );
       if (vendorMatch) {
         javaVendor = vendorMatch[1].toLowerCase();
+        // Normalize Eclipse Temurin to just temurin
+        if (javaVendor === 'eclipse temurin') {
+          javaVendor = 'temurin';
+        }
       }
 
       // Try to get JAVA_HOME
@@ -356,7 +359,6 @@ class EnvironmentManager {
       throw new Error(`Maven installation failed: ${error.message}`);
     }
   }
-
   /**
    * Download and setup Java
    */
@@ -372,14 +374,13 @@ class EnvironmentManager {
 
       // Download URL mapping for different distributions
       const downloadUrl = this.getJavaDownloadUrl();
-      const resolveRedirectDownloadUrl = await this.resolveRedirect(downloadUrl);
+      const resolveRedirectDownloadUrl = await this.resolveRedirect(downloadUrl, this.requiredJavaDistribution);
       const downloadedFile = resolveRedirectDownloadUrl.split('/').pop();
       const downloadPath = await tc.downloadTool(resolveRedirectDownloadUrl, downloadedFile);
-      const folder = downloadedFile.replace('.tar.gz', '');
-      const extractedPath = await tc.extractTar(downloadPath, process.cwd(), 'xz');
+      const extractedPath = await tc.extractTar(downloadPath, `${process.cwd()}/java-jdk`, ['xz', '--strip-components=1']);
+      core.info(`Extracted Path: ${extractedPath}`);
       // Cache the tool
       javaPath = await tc.cacheDir(extractedPath, toolName, version);
-      javaPath = path.join(javaPath, folder);
       core.debug(`Downloaded from ${resolveRedirectDownloadUrl} to ${extractedPath}`);
       if (process.platform == 'darwin') {
         javaPath = `${javaPath}/Contents/Home`;
@@ -438,17 +439,9 @@ class EnvironmentManager {
     const platform = process.platform;
     const arch = process.arch === 'x64' ? 'x64' : process.arch;
 
-    // This is a simplified example - in production, you'd have a comprehensive mapping
-    const baseUrls = {
-      temurin: `https://github.com/adoptium/temurin${version}-binaries/releases/download`,
-      zulu: `https://cdn.azul.com/zulu/bin`,
-      corretto: 'https://corretto.aws/downloads/latest',
-      oracle: ''
-      // Add other distributions as needed
-    };
     const platformMap = {
       linux: 'linux',
-      darwin: 'macos',
+      darwin: distribution === 'temurin' ? 'mac': 'macos',
       win32: 'windows'
     };
 
@@ -459,17 +452,38 @@ class EnvironmentManager {
     };
 
     const archName = archMap[arch] || 'x64';
+    // This is a simplified example - in production, you'd have a comprehensive mapping
+    const baseUrls = {
+      temurin: `https://api.adoptium.net/v3/assets/latest`,
+      zulu: `https://cdn.azul.com/zulu/bin`,
+      corretto: 'https://corretto.aws/downloads/latest',
+      oracle: ''
+      // Add other distributions as needed
+    };
     if (distribution === 'corretto') {
       return `${baseUrls.corretto}/amazon-corretto-${version}-${archName}-${platformName}-jdk.tar.gz`;
+    }
+    if (distribution === 'temurin') {
+      return `${baseUrls.temurin}/${version}/hotspot?os=${platformName}&architecture=${archName}&image_type=jdk`
     }
 
     throw new Error(`Download URL not configured for ${distribution} ${version}`);
   }
-  async resolveRedirect(initialUrl) {
+  async resolveRedirect(initialUrl, requiredJavaDistribution) {
     try {
       // fetch follows up to 20 redirects by default
       const response = await fetch(initialUrl);
-      return response.url; // This is the final destination URL
+      if (requiredJavaDistribution == 'corretto') {
+        return response.url; // This is the final destination URL
+      }
+      if (requiredJavaDistribution == 'temurin') {
+        const data = await response.json();
+        if (! data) {
+          throw new Error('No data found');
+        }
+        const temurin_url = data[0].binary.package.link;
+        return temurin_url; // This is the final destination URL
+      }
     } catch (error) {
       core.error('Error resolving URL:', error.message);
       throw error;

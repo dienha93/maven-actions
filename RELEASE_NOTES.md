@@ -1,6 +1,33 @@
-# Maven Build Action v1.0.0
+# Maven Build Action Release Notes
 
-## 🎉 Initial Release
+## v1.1.0 - Temurin Distribution Support
+*Released: December 26, 2024*
+
+### ✨ New Features
+- Added Eclipse Temurin distribution support (`java-distribution: 'temurin'`)
+- Integrated with Adoptium API v3 for reliable JDK downloads
+- Cross-platform support (Linux, macOS, Windows) with x64/ARM64 architectures
+
+### 🔧 Improvements
+- Enhanced Java vendor detection for Temurin installations
+- Improved macOS JDK path resolution (`Contents/Home`)
+- Better error handling for distribution downloads
+
+### 📝 Usage
+```yaml
+- uses: dienha93/maven-actions@v1.1.0
+  with:
+    java-distribution: 'temurin'  # New option
+    java-version: '17'
+```
+
+**Supported distributions:** `oracle`, `corretto`, `temurin`
+
+---
+
+## v1.0.0 - Initial Release
+
+### 🎉 Initial Release
 
 We're excited to announce the first stable release of Maven Build Action - a comprehensive GitHub Action designed to streamline Maven-based Java projects in your CI/CD pipelines.
 

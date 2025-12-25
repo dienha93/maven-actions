@@ -17,7 +17,7 @@ class InputValidator {
       'clean'
     ];
     this.validJavaVersions = ['8', '11', '17', '21'];
-    this.validJavaDistributions = ['oracle', 'corretto'];
+    this.validJavaDistributions = ['oracle', 'corretto', 'temurin'];
     this.maxPathLength = 260; // Windows path limit
     this.maxStringLength = 1000;
     this.sensitiveEnvVarPatterns = [
