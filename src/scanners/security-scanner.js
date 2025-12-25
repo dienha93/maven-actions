@@ -179,7 +179,7 @@ class SecurityScanner {
     let summary = '## Security Scan Results\n\n';
     
     if (results.owasp) {
-      summary += `### OWASP Dependency Check\n`;
+      summary += '### OWASP Dependency Check\n';
       summary += `- Total Vulnerabilities: ${results.owasp.vulnerabilities}\n`;
       summary += `- High Severity: ${results.owasp.highSeverity}\n`;
       summary += `- Medium Severity: ${results.owasp.mediumSeverity}\n`;

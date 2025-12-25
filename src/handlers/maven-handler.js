@@ -30,7 +30,7 @@ class MavenActionHandler {
     
     try {
       // Setup environment (Java and Maven)
-      const environmentSetup = await this.setupEnvironment();
+      await this.setupEnvironment();
       
       // Restore cache if enabled
       if (this.validatedInputs.cacheEnabled) {
@@ -38,7 +38,7 @@ class MavenActionHandler {
       }
       
       // Execute Maven operation
-      const buildResult = await this.executeMavenOperation(operation, eventContext);
+      await this.executeMavenOperation(operation, eventContext);
       
       // Handle artifacts
       const artifactPath = await this.artifactManager.handleArtifacts(operation);
@@ -52,7 +52,7 @@ class MavenActionHandler {
       const buildTime = Math.round((endTime - startTime) / 1000);
       
       return {
-        buildStatus: 'success',
+        status: 'success',
         artifactPath,
         buildTime,
         operation,
@@ -64,7 +64,7 @@ class MavenActionHandler {
       const buildTime = Math.round((endTime - startTime) / 1000);
       
       return {
-        buildStatus: 'failure',
+        status: 'failure',
         error: error.message,
         buildTime,
         operation,
@@ -102,7 +102,7 @@ class MavenActionHandler {
    * Execute specific Maven operation
    */
   async executeMavenOperation(operation, eventContext) {
-    core.info(`🔨 Executing Maven operation: ${operation}`);
+    core.info(`🔨 Executing Maven operation: ${operation} with context ${eventContext}`);
     
     switch (operation) {
       case 'validate':

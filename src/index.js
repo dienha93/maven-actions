@@ -2,6 +2,7 @@ const core = require('@actions/core');
 const { MavenActionHandler } = require('./handlers/maven-handler');
 const { EventProcessor } = require('./processors/event-processor');
 const { OutputManager } = require('./utils/output-manager');
+const { StringUtils } = require('./utils/string-utils');
 const { InputValidator } = require('./validators/input-validator');
 
 /**
@@ -9,11 +10,12 @@ const { InputValidator } = require('./validators/input-validator');
  */
 async function run() {
   try {
-    core.info('🚀 Starting Maven Build Action...');
-    
+    core.info('🚀 Starting Maven Action...');
     // Validate all inputs first (security critical)
     const inputValidator = new InputValidator();
     const validatedInputs = inputValidator.validateInputs();
+    const stringUtils = new StringUtils();
+    const nameOperation = stringUtils.toCamelCase(validatedInputs.operation)
     
     // Log sanitized inputs for debugging
     core.debug(`Validated inputs: ${JSON.stringify(inputValidator.sanitizeForLogging(validatedInputs), null, 2)}`);
@@ -36,7 +38,7 @@ async function run() {
     // Create job summary
     await outputManager.createJobSummary(result);
     
-    core.info('✅ Maven Build Action completed successfully');
+    core.info(`✅ Maven ${nameOperation} Action completed successfully`);
     
   } catch (error) {
     core.setFailed(`❌ Action failed: ${error.message}`);

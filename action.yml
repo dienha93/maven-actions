@@ -20,7 +20,7 @@ inputs:
   java-distribution:
     description: 'Java distribution to use'
     required: false
-    default: 'temurin'
+    default: 'corretto'
   
   maven-args:
     description: 'Additional Maven arguments'
@@ -31,11 +31,6 @@ inputs:
     description: 'Maven operation(s) to perform. Single operation (e.g., "package") or comma-separated sequence (e.g., "clean,compile,test,package")'
     required: true
     default: 'package'
-  
-  environment-variables:
-    description: 'Custom environment variables as JSON object or key=value pairs (one per line or semicolon-separated)'
-    required: false
-    default: '{}'
   
   working-directory:
     description: 'Working directory for Maven commands'
@@ -51,6 +46,10 @@ inputs:
     description: 'Enable Maven dependency caching'
     required: false
     default: 'true'
+  force-install:
+    description: 'Force to install Java version'
+    required: false
+    default: 'false'
 
 outputs:
   status:

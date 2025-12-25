@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const tc = require('@actions/tool-cache');
 const path = require('path');
-const fs = require('fs').promises;
 
 /**
  * Manages Java and Maven installation and version verification
@@ -15,8 +14,8 @@ class EnvironmentManager {
     this.requiredMavenVersion = validatedInputs.mavenVersion;
     
     // Supported versions (should match input-validator.js)
-    this.supportedJavaVersions = ['8', '11', '17', '21'];
-    this.supportedJavaDistributions = ['temurin', 'zulu', 'adopt', 'liberica', 'microsoft', 'corretto'];
+    this.supportedJavaVersions = ['8', '11', '17', '21', '25'];
+    this.supportedJavaDistributions = ['oracle', 'corretto'];
     this.supportedMavenVersions = ['3.6.3', '3.8.1', '3.8.6', '3.9.0', '3.9.5', '3.9.6'];
   }
 
@@ -71,14 +70,22 @@ class EnvironmentManager {
           };
         } else {
           core.warning(`⚠️ Current Java ${currentJava.version} differs from required ${this.requiredJavaVersion}`);
-          core.warning('Continuing with existing Java version. Consider updating if build issues occur.');
-          return {
-            action: 'warning',
-            version: currentJava.version,
-            vendor: currentJava.vendor,
-            path: currentJava.javaHome,
-            warning: `Version mismatch: current ${currentJava.version}, required ${this.requiredJavaVersion}`
-          };
+            core.warning('Continuing with existing Java version. Consider updating if build issues occur. ');
+            return {
+              action: 'warning',
+              version: currentJava.version,
+              vendor: currentJava.vendor,
+              path: currentJava.javaHome,
+              warning: `Version mismatch: current ${currentJava.version}, required ${this.requiredJavaVersion}`
+            };
+          // if (this.validatedInputs.forceInstall) {
+          //   core.info(`⚠️ Current Java ${currentJava.version} differs from required ${this.requiredJavaVersion}`);
+          //   core.info('Continuing with forced Java installation...');
+          //   return await this.installJava();
+          // } else {
+            
+          // }
+          
         }
       } else {
         core.info('📦 Java not found, installing...');
@@ -146,8 +153,17 @@ class EnvironmentManager {
       const versionOptions = {
         ignoreReturnCode: true,
         listeners: {
+          stderr: (data) => {
+            const strg = data.toString().trim().replace(/(\r\n|\n|\r)/gm, "")
+            if (strg.length > 0) {
+              javaVersion += strg;
+            }
+          },
           stdout: (data) => {
-            javaVersion += data.toString();
+            const strg = data.toString().trim().replace(/(\r\n|\n|\r)/gm, "")
+            if (strg.length > 0) {
+              javaVersion += strg;
+            }
           }
         }
       };
@@ -159,7 +175,7 @@ class EnvironmentManager {
       }
       
       // Parse Java version
-      const versionMatch = javaVersion.match(/version "([^"]+)"/);
+      const versionMatch = javaVersion.match(/version *"([^ ]+)"/);
       if (!versionMatch) {
         return { available: false };
       }
@@ -168,9 +184,9 @@ class EnvironmentManager {
       const majorVersion = this.extractMajorJavaVersion(fullVersion);
       
       // Try to get vendor info
-      const vendorMatch = javaVersion.match(/(OpenJDK|Oracle|Eclipse Temurin|Zulu|AdoptOpenJDK|Liberica|Microsoft|Amazon Corretto)/i);
+      const vendorMatch = javaVersion.match(/Runtime Environment (OpenJDK|Oracle|Eclipse Temurin|Zulu|AdoptOpenJDK|Liberica|Microsoft|Corretto)/i);
       if (vendorMatch) {
-        javaVendor = vendorMatch[1];
+        javaVendor = vendorMatch[1].toLowerCase();
       }
       
       // Try to get JAVA_HOME
@@ -334,12 +350,18 @@ class EnvironmentManager {
       
       // Download URL mapping for different distributions
       const downloadUrl = this.getJavaDownloadUrl();
-      
-      const downloadPath = await tc.downloadTool(downloadUrl);
-      const extractedPath = await tc.extractTar(downloadPath, undefined, 'xz');
-      
+      const resolveRedirectDownloadUrl = await this.resolveRedirect(downloadUrl)
+      const downloadedFile = resolveRedirectDownloadUrl.split('/').pop();
+      const downloadPath = await tc.downloadTool(resolveRedirectDownloadUrl, downloadedFile);
+      const folder = downloadedFile.replace('.tar.gz', '');
+      const extractedPath = await tc.extractTar(downloadPath, process.cwd(), 'xz');
       // Cache the tool
       javaPath = await tc.cacheDir(extractedPath, toolName, version);
+      javaPath = path.join(javaPath, folder);
+      core.debug(`Downloaded from ${resolveRedirectDownloadUrl} to ${extractedPath}`);
+      if (process.platform == 'darwin') {
+        javaPath = `${javaPath}/Contents/Home`
+      }
     }
     
     // Add to PATH
@@ -348,7 +370,6 @@ class EnvironmentManager {
     
     // Set JAVA_HOME
     core.exportVariable('JAVA_HOME', javaPath);
-    
     return javaPath;
   }
 
@@ -363,16 +384,14 @@ class EnvironmentManager {
     let mavenPath = tc.find(toolName, version);
     
     if (!mavenPath) {
-      core.info(`Downloading Maven ${version}...`);
+      core.debug(`Downloading Maven ${version}...`);
       
       const downloadUrl = `https://archive.apache.org/dist/maven/maven-3/${version}/binaries/apache-maven-${version}-bin.tar.gz`;
-      
       const downloadPath = await tc.downloadTool(downloadUrl);
-      const extractedPath = await tc.extractTar(downloadPath);
+      const extractedPath = await tc.extractTar(downloadPath, process.cwd());
       
       // Maven extracts to apache-maven-{version} directory
       const mavenDir = path.join(extractedPath, `apache-maven-${version}`);
-      
       // Cache the tool
       mavenPath = await tc.cacheDir(mavenDir, toolName, version);
     }
@@ -401,32 +420,39 @@ class EnvironmentManager {
     const baseUrls = {
       temurin: `https://github.com/adoptium/temurin${version}-binaries/releases/download`,
       zulu: `https://cdn.azul.com/zulu/bin`,
+      corretto: 'https://corretto.aws/downloads/latest',
+      oracle: ''
       // Add other distributions as needed
     };
-    
-    if (distribution === 'temurin') {
-      // Example for Temurin (Eclipse Adoptium)
-      const platformMap = {
+    const platformMap = {
         linux: 'linux',
-        darwin: 'mac',
+        darwin: 'macos',
         win32: 'windows'
       };
       
-      const platformName = platformMap[platform] || 'linux';
-      const archMap = {
-        x64: 'x64',
-        arm64: 'aarch64'
-      };
+    const platformName = platformMap[platform] || 'linux';
+    const archMap = {
+      x64: 'x64',
+      arm64: 'aarch64'
+    };
       
-      const archName = archMap[arch] || 'x64';
-      
-      // This would need to be more sophisticated in production
-      return `${baseUrls.temurin}/jdk-${version}+36/OpenJDK${version}U-jdk_${archName}_${platformName}_hotspot_${version}_36.tar.gz`;
+    const archName = archMap[arch] || 'x64';
+    if (distribution === 'corretto') {
+      return `${baseUrls.corretto}/amazon-corretto-${version}-${archName}-${platformName}-jdk.tar.gz`;
     }
     
     throw new Error(`Download URL not configured for ${distribution} ${version}`);
   }
-
+  async resolveRedirect(initialUrl) {
+    try {
+      // fetch follows up to 20 redirects by default
+      const response = await fetch(initialUrl);
+      return response.url; // This is the final destination URL
+    } catch (error) {
+      core.error('Error resolving URL:', error.message);
+      throw error;
+    }
+  }
   /**
    * Check if Java version is compatible
    */

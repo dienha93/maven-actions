@@ -5,7 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build outputs
-dist/
+# dist/
 lib/
 coverage/
 
@@ -62,6 +62,7 @@ temp/
 # Test artifacts
 test-results/
 junit.xml
+test.js
 
 # Action specific
 licenses.txt

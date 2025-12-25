@@ -33,8 +33,7 @@ describe('InputValidator', () => {
           'maven-version': '3.9.5',
           'working-directory': '.',
           'settings-file': 'settings.xml',
-          'maven-args': '-Dmaven.test.skip=true',
-          'environment-variables': '{"MAVEN_OPTS": "-Xmx2g"}'
+          'maven-args': '-Dmaven.test.skip=true'
         };
         return inputs[name] || '';
       });
@@ -51,7 +50,6 @@ describe('InputValidator', () => {
       expect(result).toBeDefined();
       expect(result.operation).toBe('package');
       expect(result.javaVersion).toBe('17');
-      expect(result.environmentVariables).toEqual({"MAVEN_OPTS": "-Xmx2g"});
     });
 
     it('should throw error when validation fails', () => {
@@ -366,8 +364,7 @@ describe('InputValidator', () => {
           'java-version': '17',
           'java-distribution': 'corretto',
           'maven-version': '3.9.5',
-          'working-directory': '.',
-          'environment-variables': '{"MAVEN_OPTS": "-Xmx2g"}'
+          'working-directory': '.'
         };
         return inputs[name] || '';
       });
@@ -381,57 +378,9 @@ describe('InputValidator', () => {
       expect(result.javaDistribution).toBe('corretto');
       expect(result.mavenVersion).toBe('3.9.5');
       expect(result.workingDirectory).toBe('.');
-      expect(result.environmentVariables).toEqual({"MAVEN_OPTS": "-Xmx2g"});
       expect(result.cacheEnabled).toBe(true);
     });
 
-    it('should handle key=value format environment variables', () => {
-      core.getInput.mockImplementation((name) => {
-        if (name === 'environment-variables') return 'MAVEN_OPTS=-Xmx2g\nJAVA_OPTS=-Xms1g';
-        if (name === 'operation') return 'package';
-        return '';
-      });
-
-      const result = validator.getValidatedInputs();
-
-      expect(result.environmentVariables).toEqual({
-        'MAVEN_OPTS': '-Xmx2g',
-        'JAVA_OPTS': '-Xms1g'
-      });
-    });
-
-    it('should handle invalid environment variables gracefully', () => {
-      core.getInput.mockImplementation((name) => {
-        if (name === 'environment-variables') return 'invalid json {';
-        if (name === 'operation') return 'package';
-        return '';
-      });
-
-      const result = validator.getValidatedInputs();
-
-      expect(result.environmentVariables).toEqual({});
-      expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Failed to parse environment variables'));
-    });
-  });
-
-  describe('sanitizeForLogging', () => {
-    it('should mask sensitive environment variables', () => {
-      const inputs = {
-        operation: 'deploy',
-        environmentVariables: {
-          'API_SECRET': 'secret123',
-          'MAVEN_OPTS': '-Xmx2g',
-          'DATABASE_PASSWORD': 'password123'
-        }
-      };
-
-      const sanitized = validator.sanitizeForLogging(inputs);
-
-      expect(sanitized.environmentVariables['API_SECRET']).toBe('***');
-      expect(sanitized.environmentVariables['DATABASE_PASSWORD']).toBe('***');
-      expect(sanitized.environmentVariables['MAVEN_OPTS']).toBe('-Xmx2g');
-      expect(sanitized.operation).toBe('deploy');
-    });
   });
 
   describe('security helper methods', () => {
@@ -1123,8 +1072,7 @@ describe('InputValidator', () => {
                 'maven-version': inputConfig.mavenVersion,
                 'working-directory': inputConfig.workingDirectory,
                 'settings-file': '',
-                'maven-args': '',
-                'environment-variables': '{}'
+                'maven-args': ''
               };
               return inputMap[name] || '';
             });

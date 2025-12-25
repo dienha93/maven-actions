@@ -47,6 +47,8 @@ class ArtifactManager {
    */
   async collectArtifacts(operation) {
     const targetDir = path.join(this.workingDirectory, 'target');
+    const entries = fs.readdirSync(this.workingDirectory);
+    core.info(`entries: ${JSON.stringify(entries)}`)
     const artifactPaths = [];
     
     try {

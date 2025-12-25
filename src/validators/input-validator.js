@@ -1,5 +1,5 @@
 const core = require('@actions/core');
-const path = require('path');
+// const path = require('path');
 
 /**
  * Validates all action inputs to prevent security issues and ensure proper configuration
@@ -253,7 +253,8 @@ class InputValidator {
    */
   validateBooleanInputs(errors) {
     const booleanInputs = [
-      'cache-enabled'
+      'cache-enabled',
+      'force-install'
     ];
     
     for (const inputName of booleanInputs) {
@@ -297,27 +298,9 @@ class InputValidator {
    */
   getValidatedInputs() {
     
-    // Parse environment variables if provided
-    let environmentVariables = {};
-    const envVarsInput = core.getInput('environment-variables');
-    if (envVarsInput) {
-      try {
-        if (envVarsInput.trim().startsWith('{')) {
-          environmentVariables = JSON.parse(envVarsInput);
-        } else {
-          environmentVariables = this.parseKeyValuePairs(envVarsInput);
-        }
-      } catch (error) {
-        core.warning(`Failed to parse environment variables: ${error.message}`);
-      }
-    }
-    
     return {
       // Original single operation for backward compatibility
       operation: core.getInput('operation'),
-      
-      // Environment variables
-      environmentVariables: environmentVariables,
       
       // Existing inputs
       javaVersion: core.getInput('java-version') || '17',
@@ -327,6 +310,10 @@ class InputValidator {
       settingsFile: core.getInput('settings-file'),
       mavenArgs: core.getInput('maven-args'),
       cacheEnabled: core.getBooleanInput('cache-enabled'),
+      forceInstall: core.getBooleanInput('force-install'),
+
+      // New inputs
+      envVars: this.parseKeyValuePairs(core.getInput('env-vars'))
     };
   }
 
@@ -335,20 +322,6 @@ class InputValidator {
    */
   sanitizeForLogging(inputs) {
     const sanitized = { ...inputs };
-    
-    // Sanitize environment variables
-    if (sanitized.environmentVariables && typeof sanitized.environmentVariables === 'object') {
-      const sanitizedEnvVars = {};
-      for (const [key, value] of Object.entries(sanitized.environmentVariables)) {
-        if (this.isSensitiveEnvironmentVariable(key)) {
-          sanitizedEnvVars[key] = '***';
-        } else {
-          sanitizedEnvVars[key] = value;
-        }
-      }
-      sanitized.environmentVariables = sanitizedEnvVars;
-    }
-    
     return sanitized;
   }
 }

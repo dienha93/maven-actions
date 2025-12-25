@@ -12,7 +12,7 @@ class CacheManager {
     this.validatedInputs = validatedInputs;
     this.workingDirectory = validatedInputs.workingDirectory;
     this.cacheEnabled = validatedInputs.cacheEnabled;
-    this.m2Repository = path.join(require('os').homedir(), '.m2', 'repository');
+    this.m2Repository = path.join(validatedInputs.workingDirectory, '.m2', 'repository');
   }
 
   /**

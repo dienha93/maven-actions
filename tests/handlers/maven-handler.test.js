@@ -23,7 +23,6 @@ describe('MavenActionHandler', () => {
     // Create mock validated inputs with the new structure
     validatedInputs = {
       operation: 'package',
-      environmentVariables: {},
       javaVersion: '17',
       javaDistribution: 'corretto',
       mavenVersion: '3.9.5',
@@ -93,7 +92,7 @@ describe('MavenActionHandler', () => {
       const result = await handler.execute(eventContext);
 
       // Assert
-      expect(result.buildStatus).toBe('success');
+      expect(result.status).toBe('success');
       expect(result.operation).toBe('package');
       expect(result.artifactPath).toEqual(['/path/to/artifact.jar']);
       expect(handler.cacheManager.restore).toHaveBeenCalled();
@@ -115,7 +114,7 @@ describe('MavenActionHandler', () => {
       const result = await handler.execute(eventContext);
 
       // Assert
-      expect(result.buildStatus).toBe('failure');
+      expect(result.status).toBe('failure');
       expect(result.error).toBe('Maven build failed');
       expect(result.operation).toBe('package');
     });
@@ -139,7 +138,7 @@ describe('MavenActionHandler', () => {
       const result = await handler.execute(eventContext);
 
       // Assert
-      expect(result.buildStatus).toBe('success');
+      expect(result.status).toBe('success');
     });
 
   });

@@ -16,7 +16,7 @@ describe('EnvironmentManager', () => {
   beforeEach(() => {
     validatedInputs = {
       javaVersion: '17',
-      javaDistribution: 'temurin',
+      javaDistribution: 'corretto',
       mavenVersion: '3.9.5'
     };
     
@@ -72,7 +72,7 @@ describe('EnvironmentManager', () => {
       manager.installJava = jest.fn().mockResolvedValue({
         action: 'installed',
         version: '17',
-        distribution: 'temurin'
+        distribution: 'corretto'
       });
       
       manager.verifyEnvironment = jest.fn().mockResolvedValue({});
@@ -112,7 +112,7 @@ describe('EnvironmentManager', () => {
 
   describe('getCurrentJavaVersion', () => {
     it('should detect Java version correctly', async () => {
-      const mockOutput = 'openjdk version "17.0.2" 2022-01-18\nOpenJDK Runtime Environment Temurin-17.0.2+8';
+      const mockOutput = 'openjdk version "17.0.2" 2022-01-18\nOpenJDK Runtime Environment Corretto-17.0.17.10.1';
       
       exec.exec.mockImplementation((command, args, options) => {
         if (command === 'java' && args.includes('-version')) {
@@ -126,7 +126,7 @@ describe('EnvironmentManager', () => {
 
       expect(result.available).toBe(true);
       expect(result.version).toBe('17');
-      expect(result.vendor).toBe('openjdk');
+      expect(result.vendor).toBe('corretto');
     });
 
     it('should handle Java 8 version format', async () => {

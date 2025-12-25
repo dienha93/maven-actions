@@ -1,7 +1,5 @@
 const core = require('@actions/core');
 const exec = require('@actions/exec');
-const path = require('path');
-
 /**
  * Executes Maven commands with proper configuration and error handling
  */

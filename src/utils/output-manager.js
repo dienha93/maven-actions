@@ -1,5 +1,5 @@
 const core = require('@actions/core');
-
+const { StringUtils } = require('./string-utils');
 /**
  * Manages action outputs and provides formatted results
  */
@@ -15,7 +15,7 @@ class OutputManager {
     core.info('📋 Setting action outputs...');
 
     // Build status
-    this.setOutput('status', result.buildStatus);
+    this.setOutput('status', result.status);
     
     // Build time
     this.setOutput('build-time', result.buildTime?.toString() || '0');
@@ -74,8 +74,8 @@ class OutputManager {
       core.summary.addHeading('Maven Build Results', 1);
       
       // Build status
-      const statusEmoji = result.buildStatus === 'success' ? '✅' : '❌';
-      core.summary.addRaw(`${statusEmoji} **Build Status:** ${result.buildStatus.toUpperCase()}\n`);
+      const statusEmoji = result.status === 'success' ? '✅' : '❌';
+      core.summary.addRaw(`${statusEmoji} **Build Status:** ${result.status.toUpperCase()}\n`);
       core.summary.addRaw(`⏱️ **Build Time:** ${result.buildTime}s\n\n`);
 
       // Environment information
