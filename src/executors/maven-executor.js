@@ -79,32 +79,32 @@ class MavenExecutor {
    */
   async executeMavenCommand(phase, additionalArgs = []) {
     const args = ['mvn', phase];
-    
+
     // Add settings file if specified
     if (this.settingsFile) {
       args.push('-s', this.settingsFile);
     }
-    
+
     // Add additional arguments
     args.push(...additionalArgs);
-    
+
     // Add custom Maven arguments
     if (this.mavenArgs) {
       args.push(...this.mavenArgs.split(' '));
     }
-    
+
     // Add common flags
     args.push('-B'); // Batch mode
     args.push('-V'); // Show version
-    
+
     const options = {
       cwd: this.workingDirectory,
       ignoreReturnCode: false
     };
-    
+
     try {
       const exitCode = await exec.exec(args[0], args.slice(1), options);
-      
+
       if (exitCode === 0) {
         core.info(`✅ Maven ${phase} completed successfully`);
         return { success: true, phase, exitCode };
@@ -122,7 +122,7 @@ class MavenExecutor {
    */
   async getProjectInfo() {
     const args = ['mvn', 'help:evaluate', '-Dexpression=project.version', '-q', '-DforceStdout'];
-    
+
     let version = '';
     const options = {
       cwd: this.workingDirectory,
@@ -132,9 +132,9 @@ class MavenExecutor {
         }
       }
     };
-    
+
     await exec.exec(args[0], args.slice(1), options);
-    
+
     return {
       version: version.trim()
     };

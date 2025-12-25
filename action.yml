@@ -28,7 +28,7 @@ inputs:
     default: ''
   
   operation:
-    description: 'Maven operation(s) to perform. Single operation (e.g., "package") or comma-separated sequence (e.g., "clean,compile,test,package")'
+    description: Maven operation to perform (e.g., "package", "test", "install")
     required: true
     default: 'package'
   
@@ -46,6 +46,7 @@ inputs:
     description: 'Enable Maven dependency caching'
     required: false
     default: 'true'
+    
   force-install:
     description: 'Force to install Java version'
     required: false

@@ -16,20 +16,20 @@ class OutputManager {
 
     // Build status
     this.setOutput('status', result.status);
-    
+
     // Build time
     this.setOutput('build-time', result.buildTime?.toString() || '0');
-    
+
     // Artifact path
     if (result.artifactPath && result.artifactPath.length > 0) {
       this.setOutput('artifact-path', result.artifactPath.join(','));
     }
-    
+
     // Environment information
     if (result.environment) {
       this.setOutput('java-version', result.environment.java.version);
       this.setOutput('maven-version', result.environment.maven.version);
-      
+
       // Set warnings if any
       const warnings = [];
       if (result.environment.java.warning) {
@@ -38,12 +38,12 @@ class OutputManager {
       if (result.environment.maven.warning) {
         warnings.push(`Maven: ${result.environment.maven.warning}`);
       }
-      
+
       if (warnings.length > 0) {
         this.setOutput('environment-warnings', warnings.join('; '));
       }
     }
-    
+
     // Error information
     if (result.error) {
       core.setOutput('error-message', result.error);
@@ -72,7 +72,7 @@ class OutputManager {
     try {
       // Main header
       core.summary.addHeading('Maven Build Results', 1);
-      
+
       // Build status
       const statusEmoji = result.status === 'success' ? '✅' : '❌';
       core.summary.addRaw(`${statusEmoji} **Build Status:** ${result.status.toUpperCase()}\n`);
@@ -101,13 +101,12 @@ class OutputManager {
     }
   }
 
-
   /**
    * Add environment section to summary
    */
   async addEnvironmentSection(environment) {
     core.summary.addHeading('Environment', 2);
-    
+
     const environmentTable = [
       ['Tool', 'Version', 'Status', 'Notes'],
       [
@@ -132,26 +131,27 @@ class OutputManager {
    */
   getActionStatusEmoji(action) {
     switch (action) {
-      case 'existing': return '✅ Existing';
-      case 'installed': return '📦 Installed';
-      case 'warning': return '⚠️ Warning';
-      default: return '❓ Unknown';
+      case 'existing':
+        return '✅ Existing';
+      case 'installed':
+        return '📦 Installed';
+      case 'warning':
+        return '⚠️ Warning';
+      default:
+        return '❓ Unknown';
     }
   }
   async addArtifactsSection(artifactPaths) {
     core.summary.addHeading('Build Artifacts', 2);
-    
-    const artifacts = artifactPaths.map(path => {
+
+    const artifacts = artifactPaths.map((path) => {
       const fileName = path.split('/').pop();
       const fileType = fileName.split('.').pop().toUpperCase();
       return [fileName, fileType];
     });
 
     if (artifacts.length > 0) {
-      core.summary.addTable([
-        ['Artifact', 'Type'],
-        ...artifacts
-      ]);
+      core.summary.addTable([['Artifact', 'Type'], ...artifacts]);
     }
 
     core.summary.addRaw(`\n📦 **Total Artifacts:** ${artifacts.length}\n`);
@@ -162,7 +162,7 @@ class OutputManager {
    */
   logOutputSummary() {
     core.info('📋 Action Outputs Summary:');
-    
+
     Object.entries(this.outputs).forEach(([key, value]) => {
       core.info(`  ${key}: ${value}`);
     });

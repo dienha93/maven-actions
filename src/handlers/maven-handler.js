@@ -27,30 +27,30 @@ class MavenActionHandler {
   async execute(eventContext) {
     const startTime = Date.now();
     const operation = this.validatedInputs.operation;
-    
+
     try {
       // Setup environment (Java and Maven)
       await this.setupEnvironment();
-      
+
       // Restore cache if enabled
       if (this.validatedInputs.cacheEnabled) {
         await this.cacheManager.restore();
       }
-      
+
       // Execute Maven operation
       await this.executeMavenOperation(operation, eventContext);
-      
+
       // Handle artifacts
       const artifactPath = await this.artifactManager.handleArtifacts(operation);
-      
+
       // Save cache if enabled
       if (this.validatedInputs.cacheEnabled) {
         await this.cacheManager.save();
       }
-      
+
       const endTime = Date.now();
       const buildTime = Math.round((endTime - startTime) / 1000);
-      
+
       return {
         status: 'success',
         artifactPath,
@@ -58,11 +58,10 @@ class MavenActionHandler {
         operation,
         environment: this.environmentInfo
       };
-      
     } catch (error) {
       const endTime = Date.now();
       const buildTime = Math.round((endTime - startTime) / 1000);
-      
+
       return {
         status: 'failure',
         error: error.message,
@@ -78,20 +77,19 @@ class MavenActionHandler {
    */
   async setupEnvironment() {
     core.info('🔧 Setting up Maven environment...');
-    
+
     try {
       // Setup Java and Maven environment
       const environmentSetup = await this.environmentManager.setupEnvironment();
-      
+
       // Store environment info for outputs
       this.environmentInfo = this.environmentManager.getEnvironmentSummary(
         environmentSetup.java,
         environmentSetup.maven
       );
-      
+
       core.info('✅ Environment setup completed');
       return environmentSetup;
-      
     } catch (error) {
       core.error(`Environment setup failed: ${error.message}`);
       throw error;
@@ -103,7 +101,7 @@ class MavenActionHandler {
    */
   async executeMavenOperation(operation, eventContext) {
     core.info(`🔨 Executing Maven operation: ${operation} with context ${eventContext}`);
-    
+
     switch (operation) {
       case 'validate':
         return await this.mavenExecutor.validate();

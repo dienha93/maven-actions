@@ -12,7 +12,7 @@ class EnvironmentManager {
     this.requiredJavaVersion = validatedInputs.javaVersion;
     this.requiredJavaDistribution = validatedInputs.javaDistribution;
     this.requiredMavenVersion = validatedInputs.mavenVersion;
-    
+
     // Supported versions (should match input-validator.js)
     this.supportedJavaVersions = ['8', '11', '17', '21', '25'];
     this.supportedJavaDistributions = ['oracle', 'corretto'];
@@ -24,22 +24,21 @@ class EnvironmentManager {
    */
   async setupEnvironment() {
     core.info('🔧 Setting up build environment...');
-    
+
     try {
       // Check and setup Java
       const javaSetup = await this.setupJava();
-      
+
       // Check and setup Maven
       const mavenSetup = await this.setupMaven();
-      
+
       // Verify final setup
       await this.verifyEnvironment();
-      
+
       return {
         java: javaSetup,
         maven: mavenSetup
       };
-      
     } catch (error) {
       core.setFailed(`Environment setup failed: ${error.message}`);
       throw error;
@@ -51,17 +50,21 @@ class EnvironmentManager {
    */
   async setupJava() {
     core.info('☕ Checking Java environment...');
-    
+
     try {
       // Check if Java is already available
       const currentJava = await this.getCurrentJavaVersion();
-      
+
       if (currentJava.available) {
-        core.info(`📋 Current Java: ${currentJava.version} (${currentJava.vendor || 'unknown vendor'})`);
-        
+        core.info(
+          `📋 Current Java: ${currentJava.version} (${currentJava.vendor || 'unknown vendor'})`
+        );
+
         // Check if current version matches required
         if (this.isJavaVersionCompatible(currentJava.version)) {
-          core.info(`✅ Java ${currentJava.version} is compatible with required ${this.requiredJavaVersion}`);
+          core.info(
+            `✅ Java ${currentJava.version} is compatible with required ${this.requiredJavaVersion}`
+          );
           return {
             action: 'existing',
             version: currentJava.version,
@@ -69,29 +72,31 @@ class EnvironmentManager {
             path: currentJava.javaHome
           };
         } else {
-          core.warning(`⚠️ Current Java ${currentJava.version} differs from required ${this.requiredJavaVersion}`);
-            core.warning('Continuing with existing Java version. Consider updating if build issues occur. ');
-            return {
-              action: 'warning',
-              version: currentJava.version,
-              vendor: currentJava.vendor,
-              path: currentJava.javaHome,
-              warning: `Version mismatch: current ${currentJava.version}, required ${this.requiredJavaVersion}`
-            };
+          core.warning(
+            `⚠️ Current Java ${currentJava.version} differs from required ${this.requiredJavaVersion}`
+          );
+          core.warning(
+            'Continuing with existing Java version. Consider updating if build issues occur. '
+          );
+          return {
+            action: 'warning',
+            version: currentJava.version,
+            vendor: currentJava.vendor,
+            path: currentJava.javaHome,
+            warning: `Version mismatch: current ${currentJava.version}, required ${this.requiredJavaVersion}`
+          };
           // if (this.validatedInputs.forceInstall) {
           //   core.info(`⚠️ Current Java ${currentJava.version} differs from required ${this.requiredJavaVersion}`);
           //   core.info('Continuing with forced Java installation...');
           //   return await this.installJava();
           // } else {
-            
+
           // }
-          
         }
       } else {
         core.info('📦 Java not found, installing...');
         return await this.installJava();
       }
-      
     } catch (error) {
       core.error(`Java setup failed: ${error.message}`);
       throw error;
@@ -103,25 +108,31 @@ class EnvironmentManager {
    */
   async setupMaven() {
     core.info('🔨 Checking Maven environment...');
-    
+
     try {
       // Check if Maven is already available
       const currentMaven = await this.getCurrentMavenVersion();
-      
+
       if (currentMaven.available) {
         core.info(`📋 Current Maven: ${currentMaven.version}`);
-        
+
         // Check if current version matches required
         if (this.isMavenVersionCompatible(currentMaven.version)) {
-          core.info(`✅ Maven ${currentMaven.version} is compatible with required ${this.requiredMavenVersion}`);
+          core.info(
+            `✅ Maven ${currentMaven.version} is compatible with required ${this.requiredMavenVersion}`
+          );
           return {
             action: 'existing',
             version: currentMaven.version,
             path: currentMaven.mavenHome
           };
         } else {
-          core.warning(`⚠️ Current Maven ${currentMaven.version} differs from required ${this.requiredMavenVersion}`);
-          core.warning('Continuing with existing Maven version. Consider updating if build issues occur.');
+          core.warning(
+            `⚠️ Current Maven ${currentMaven.version} differs from required ${this.requiredMavenVersion}`
+          );
+          core.warning(
+            'Continuing with existing Maven version. Consider updating if build issues occur.'
+          );
           return {
             action: 'warning',
             version: currentMaven.version,
@@ -133,7 +144,6 @@ class EnvironmentManager {
         core.info('📦 Maven not found, installing...');
         return await this.installMaven();
       }
-      
     } catch (error) {
       core.error(`Maven setup failed: ${error.message}`);
       throw error;
@@ -148,47 +158,55 @@ class EnvironmentManager {
       let javaVersion = '';
       let javaVendor = '';
       let javaHome = '';
-      
+
       // Try to get Java version
       const versionOptions = {
         ignoreReturnCode: true,
         listeners: {
           stderr: (data) => {
-            const strg = data.toString().trim().replace(/(\r\n|\n|\r)/gm, "")
+            const strg = data
+              .toString()
+              .trim()
+              .replace(/(\r\n|\n|\r)/gm, '');
             if (strg.length > 0) {
               javaVersion += strg;
             }
           },
           stdout: (data) => {
-            const strg = data.toString().trim().replace(/(\r\n|\n|\r)/gm, "")
+            const strg = data
+              .toString()
+              .trim()
+              .replace(/(\r\n|\n|\r)/gm, '');
             if (strg.length > 0) {
               javaVersion += strg;
             }
           }
         }
       };
-      
+
       const exitCode = await exec.exec('java', ['-version'], versionOptions);
-      
+
       if (exitCode !== 0) {
         return { available: false };
       }
-      
+
       // Parse Java version
       const versionMatch = javaVersion.match(/version *"([^ ]+)"/);
       if (!versionMatch) {
         return { available: false };
       }
-      
+
       const fullVersion = versionMatch[1];
       const majorVersion = this.extractMajorJavaVersion(fullVersion);
-      
+
       // Try to get vendor info
-      const vendorMatch = javaVersion.match(/Runtime Environment (OpenJDK|Oracle|Eclipse Temurin|Zulu|AdoptOpenJDK|Liberica|Microsoft|Corretto)/i);
+      const vendorMatch = javaVersion.match(
+        /Runtime Environment (OpenJDK|Oracle|Eclipse Temurin|Zulu|AdoptOpenJDK|Liberica|Microsoft|Corretto)/i
+      );
       if (vendorMatch) {
         javaVendor = vendorMatch[1].toLowerCase();
       }
-      
+
       // Try to get JAVA_HOME
       try {
         javaHome = process.env.JAVA_HOME || '';
@@ -203,7 +221,7 @@ class EnvironmentManager {
               }
             }
           };
-          
+
           await exec.exec('java', ['-XshowSettings:properties', '-version'], homeOptions);
           const homeMatch = javaHomeOutput.match(/java\.home = (.+)/);
           if (homeMatch) {
@@ -213,7 +231,7 @@ class EnvironmentManager {
       } catch (error) {
         // JAVA_HOME detection failed, continue without it
       }
-      
+
       return {
         available: true,
         version: majorVersion,
@@ -221,7 +239,6 @@ class EnvironmentManager {
         vendor: javaVendor,
         javaHome: javaHome
       };
-      
     } catch (error) {
       return { available: false };
     }
@@ -233,7 +250,7 @@ class EnvironmentManager {
   async getCurrentMavenVersion() {
     try {
       let mavenOutput = '';
-      
+
       const options = {
         ignoreReturnCode: true,
         listeners: {
@@ -242,34 +259,33 @@ class EnvironmentManager {
           }
         }
       };
-      
+
       const exitCode = await exec.exec('mvn', ['-version'], options);
-      
+
       if (exitCode !== 0) {
         return { available: false };
       }
-      
+
       // Parse Maven version
       const versionMatch = mavenOutput.match(/Apache Maven ([^\s]+)/);
       if (!versionMatch) {
         return { available: false };
       }
-      
+
       const version = versionMatch[1];
-      
+
       // Try to get Maven home
       let mavenHome = '';
       const homeMatch = mavenOutput.match(/Maven home: (.+)/);
       if (homeMatch) {
         mavenHome = homeMatch[1].trim();
       }
-      
+
       return {
         available: true,
         version: version,
         mavenHome: mavenHome
       };
-      
     } catch (error) {
       return { available: false };
     }
@@ -279,30 +295,35 @@ class EnvironmentManager {
    * Install Java using GitHub Actions setup-java
    */
   async installJava() {
-    core.info(`📦 Installing Java ${this.requiredJavaVersion} (${this.requiredJavaDistribution})...`);
-    
+    core.info(
+      `📦 Installing Java ${this.requiredJavaVersion} (${this.requiredJavaDistribution})...`
+    );
+
     try {
       // Validate requested version is supported
       if (!this.supportedJavaVersions.includes(this.requiredJavaVersion)) {
-        throw new Error(`Unsupported Java version: ${this.requiredJavaVersion}. Supported: ${this.supportedJavaVersions.join(', ')}`);
+        throw new Error(
+          `Unsupported Java version: ${this.requiredJavaVersion}. Supported: ${this.supportedJavaVersions.join(', ')}`
+        );
       }
-      
+
       if (!this.supportedJavaDistributions.includes(this.requiredJavaDistribution)) {
-        throw new Error(`Unsupported Java distribution: ${this.requiredJavaDistribution}. Supported: ${this.supportedJavaDistributions.join(', ')}`);
+        throw new Error(
+          `Unsupported Java distribution: ${this.requiredJavaDistribution}. Supported: ${this.supportedJavaDistributions.join(', ')}`
+        );
       }
-      
+
       // Use actions/setup-java approach
       const javaPath = await this.downloadAndSetupJava();
-      
+
       core.info(`✅ Java ${this.requiredJavaVersion} installed successfully`);
-      
+
       return {
         action: 'installed',
         version: this.requiredJavaVersion,
         distribution: this.requiredJavaDistribution,
         path: javaPath
       };
-      
     } catch (error) {
       throw new Error(`Java installation failed: ${error.message}`);
     }
@@ -313,23 +334,24 @@ class EnvironmentManager {
    */
   async installMaven() {
     core.info(`📦 Installing Maven ${this.requiredMavenVersion}...`);
-    
+
     try {
       // Validate requested version is supported
       if (!this.supportedMavenVersions.includes(this.requiredMavenVersion)) {
-        throw new Error(`Unsupported Maven version: ${this.requiredMavenVersion}. Supported: ${this.supportedMavenVersions.join(', ')}`);
+        throw new Error(
+          `Unsupported Maven version: ${this.requiredMavenVersion}. Supported: ${this.supportedMavenVersions.join(', ')}`
+        );
       }
-      
+
       const mavenPath = await this.downloadAndSetupMaven();
-      
+
       core.info(`✅ Maven ${this.requiredMavenVersion} installed successfully`);
-      
+
       return {
         action: 'installed',
         version: this.requiredMavenVersion,
         path: mavenPath
       };
-      
     } catch (error) {
       throw new Error(`Maven installation failed: ${error.message}`);
     }
@@ -341,16 +363,16 @@ class EnvironmentManager {
   async downloadAndSetupJava() {
     const toolName = 'Java_' + this.requiredJavaDistribution;
     const version = this.requiredJavaVersion;
-    
+
     // Check if already cached
     let javaPath = tc.find(toolName, version);
-    
+
     if (!javaPath) {
       core.info(`Downloading Java ${version} (${this.requiredJavaDistribution})...`);
-      
+
       // Download URL mapping for different distributions
       const downloadUrl = this.getJavaDownloadUrl();
-      const resolveRedirectDownloadUrl = await this.resolveRedirect(downloadUrl)
+      const resolveRedirectDownloadUrl = await this.resolveRedirect(downloadUrl);
       const downloadedFile = resolveRedirectDownloadUrl.split('/').pop();
       const downloadPath = await tc.downloadTool(resolveRedirectDownloadUrl, downloadedFile);
       const folder = downloadedFile.replace('.tar.gz', '');
@@ -360,14 +382,14 @@ class EnvironmentManager {
       javaPath = path.join(javaPath, folder);
       core.debug(`Downloaded from ${resolveRedirectDownloadUrl} to ${extractedPath}`);
       if (process.platform == 'darwin') {
-        javaPath = `${javaPath}/Contents/Home`
+        javaPath = `${javaPath}/Contents/Home`;
       }
     }
-    
+
     // Add to PATH
     const binPath = path.join(javaPath, 'bin');
     core.addPath(binPath);
-    
+
     // Set JAVA_HOME
     core.exportVariable('JAVA_HOME', javaPath);
     return javaPath;
@@ -379,31 +401,31 @@ class EnvironmentManager {
   async downloadAndSetupMaven() {
     const toolName = 'Maven';
     const version = this.requiredMavenVersion;
-    
+
     // Check if already cached
     let mavenPath = tc.find(toolName, version);
-    
+
     if (!mavenPath) {
       core.debug(`Downloading Maven ${version}...`);
-      
+
       const downloadUrl = `https://archive.apache.org/dist/maven/maven-3/${version}/binaries/apache-maven-${version}-bin.tar.gz`;
       const downloadPath = await tc.downloadTool(downloadUrl);
       const extractedPath = await tc.extractTar(downloadPath, process.cwd());
-      
+
       // Maven extracts to apache-maven-{version} directory
       const mavenDir = path.join(extractedPath, `apache-maven-${version}`);
       // Cache the tool
       mavenPath = await tc.cacheDir(mavenDir, toolName, version);
     }
-    
+
     // Add to PATH
     const binPath = path.join(mavenPath, 'bin');
     core.addPath(binPath);
-    
+
     // Set M2_HOME
     core.exportVariable('M2_HOME', mavenPath);
     core.exportVariable('MAVEN_HOME', mavenPath);
-    
+
     return mavenPath;
   }
 
@@ -415,7 +437,7 @@ class EnvironmentManager {
     const distribution = this.requiredJavaDistribution;
     const platform = process.platform;
     const arch = process.arch === 'x64' ? 'x64' : process.arch;
-    
+
     // This is a simplified example - in production, you'd have a comprehensive mapping
     const baseUrls = {
       temurin: `https://github.com/adoptium/temurin${version}-binaries/releases/download`,
@@ -425,22 +447,22 @@ class EnvironmentManager {
       // Add other distributions as needed
     };
     const platformMap = {
-        linux: 'linux',
-        darwin: 'macos',
-        win32: 'windows'
-      };
-      
+      linux: 'linux',
+      darwin: 'macos',
+      win32: 'windows'
+    };
+
     const platformName = platformMap[platform] || 'linux';
     const archMap = {
       x64: 'x64',
       arm64: 'aarch64'
     };
-      
+
     const archName = archMap[arch] || 'x64';
     if (distribution === 'corretto') {
       return `${baseUrls.corretto}/amazon-corretto-${version}-${archName}-${platformName}-jdk.tar.gz`;
     }
-    
+
     throw new Error(`Download URL not configured for ${distribution} ${version}`);
   }
   async resolveRedirect(initialUrl) {
@@ -458,8 +480,10 @@ class EnvironmentManager {
    */
   isJavaVersionCompatible(currentVersion) {
     // Allow exact match or compatible versions
-    return currentVersion === this.requiredJavaVersion || 
-           this.isJavaVersionBackwardCompatible(currentVersion, this.requiredJavaVersion);
+    return (
+      currentVersion === this.requiredJavaVersion ||
+      this.isJavaVersionBackwardCompatible(currentVersion, this.requiredJavaVersion)
+    );
   }
 
   /**
@@ -467,8 +491,10 @@ class EnvironmentManager {
    */
   isMavenVersionCompatible(currentVersion) {
     // Allow exact match or compatible versions
-    return currentVersion === this.requiredMavenVersion ||
-           this.isMavenVersionBackwardCompatible(currentVersion, this.requiredMavenVersion);
+    return (
+      currentVersion === this.requiredMavenVersion ||
+      this.isMavenVersionBackwardCompatible(currentVersion, this.requiredMavenVersion)
+    );
   }
 
   /**
@@ -477,7 +503,7 @@ class EnvironmentManager {
   isJavaVersionBackwardCompatible(current, required) {
     const currentMajor = parseInt(current);
     const requiredMajor = parseInt(required);
-    
+
     // Higher versions are generally backward compatible
     return currentMajor >= requiredMajor;
   }
@@ -489,15 +515,15 @@ class EnvironmentManager {
     // Simple semantic version comparison
     const currentParts = current.split('.').map(Number);
     const requiredParts = required.split('.').map(Number);
-    
+
     for (let i = 0; i < Math.max(currentParts.length, requiredParts.length); i++) {
       const currentPart = currentParts[i] || 0;
       const requiredPart = requiredParts[i] || 0;
-      
+
       if (currentPart > requiredPart) return true;
       if (currentPart < requiredPart) return false;
     }
-    
+
     return true; // Equal versions
   }
 
@@ -508,11 +534,11 @@ class EnvironmentManager {
     // Handle different Java version formats
     // Java 8: "1.8.0_XXX"
     // Java 11+: "11.0.X", "17.0.X", etc.
-    
+
     if (fullVersion.startsWith('1.8')) {
       return '8';
     }
-    
+
     const match = fullVersion.match(/^(\d+)/);
     return match ? match[1] : fullVersion;
   }
@@ -522,29 +548,28 @@ class EnvironmentManager {
    */
   async verifyEnvironment() {
     core.info('🔍 Verifying environment setup...');
-    
+
     try {
       // Verify Java
       const javaCheck = await this.getCurrentJavaVersion();
       if (!javaCheck.available) {
         throw new Error('Java verification failed - not available after setup');
       }
-      
+
       // Verify Maven
       const mavenCheck = await this.getCurrentMavenVersion();
       if (!mavenCheck.available) {
         throw new Error('Maven verification failed - not available after setup');
       }
-      
+
       core.info(`✅ Environment verified:`);
       core.info(`   Java: ${javaCheck.version} (${javaCheck.vendor || 'unknown'})`);
       core.info(`   Maven: ${mavenCheck.version}`);
-      
+
       return {
         java: javaCheck,
         maven: mavenCheck
       };
-      
     } catch (error) {
       throw new Error(`Environment verification failed: ${error.message}`);
     }

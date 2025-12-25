@@ -1,9 +1,7 @@
 class StringUtils {
-  constructor() {
-
-  }
+  constructor() {}
   toCamelCase(str) {
-// Check if the input string is empty
+    // Check if the input string is empty
     if (str.length === 0) {
       return str;
     }

@@ -17,11 +17,11 @@ class SecurityScanner {
    */
   async scan() {
     core.info('🔒 Running security vulnerability scan...');
-    
+
     try {
       const owaspResults = await this.runOwaspDependencyCheck();
       const snykResults = await this.runSnykScan();
-      
+
       return {
         owasp: owaspResults,
         snyk: snykResults,
@@ -38,7 +38,7 @@ class SecurityScanner {
    */
   async runOwaspDependencyCheck() {
     core.info('🛡️ Running OWASP Dependency Check...');
-    
+
     try {
       const args = [
         'mvn',
@@ -46,29 +46,29 @@ class SecurityScanner {
         '-DfailBuildOnCVSS=7',
         '-DsuppressionsFile=owasp-suppressions.xml'
       ];
-      
+
       const options = {
         cwd: this.workingDirectory,
         ignoreReturnCode: true
       };
-      
+
       const exitCode = await exec.exec(args[0], args.slice(1), options);
-      
+
       // Parse OWASP report
       const reportPath = path.join(this.workingDirectory, 'target', 'dependency-check-report.json');
-      
+
       try {
         const reportContent = await fs.readFile(reportPath, 'utf8');
         const report = JSON.parse(reportContent);
-        
+
         const vulnerabilities = this.parseOwaspReport(report);
-        
+
         return {
           success: exitCode === 0,
           vulnerabilities: vulnerabilities.length,
-          highSeverity: vulnerabilities.filter(v => v.severity === 'HIGH').length,
-          mediumSeverity: vulnerabilities.filter(v => v.severity === 'MEDIUM').length,
-          lowSeverity: vulnerabilities.filter(v => v.severity === 'LOW').length,
+          highSeverity: vulnerabilities.filter((v) => v.severity === 'HIGH').length,
+          mediumSeverity: vulnerabilities.filter((v) => v.severity === 'MEDIUM').length,
+          lowSeverity: vulnerabilities.filter((v) => v.severity === 'LOW').length,
           reportPath,
           details: vulnerabilities
         };
@@ -87,7 +87,7 @@ class SecurityScanner {
    */
   async runSnykScan() {
     core.info('🐍 Running Snyk security scan...');
-    
+
     try {
       // Check if Snyk token is available
       const snykToken = process.env.SNYK_TOKEN;
@@ -95,14 +95,9 @@ class SecurityScanner {
         core.warning('SNYK_TOKEN not found, skipping Snyk scan');
         return null;
       }
-      
-      const args = [
-        'snyk',
-        'test',
-        '--json',
-        '--severity-threshold=medium'
-      ];
-      
+
+      const args = ['snyk', 'test', '--json', '--severity-threshold=medium'];
+
       let output = '';
       const options = {
         cwd: this.workingDirectory,
@@ -113,20 +108,20 @@ class SecurityScanner {
           }
         }
       };
-      
+
       const exitCode = await exec.exec(args[0], args.slice(1), options);
-      
+
       try {
         const result = JSON.parse(output);
         const vulnerabilities = result.vulnerabilities || [];
-        
+
         return {
           success: exitCode === 0,
           vulnerabilities: vulnerabilities.length,
-          highSeverity: vulnerabilities.filter(v => v.severity === 'high').length,
-          mediumSeverity: vulnerabilities.filter(v => v.severity === 'medium').length,
-          lowSeverity: vulnerabilities.filter(v => v.severity === 'low').length,
-          details: vulnerabilities.map(v => ({
+          highSeverity: vulnerabilities.filter((v) => v.severity === 'high').length,
+          mediumSeverity: vulnerabilities.filter((v) => v.severity === 'medium').length,
+          lowSeverity: vulnerabilities.filter((v) => v.severity === 'low').length,
+          details: vulnerabilities.map((v) => ({
             id: v.id,
             title: v.title,
             severity: v.severity,
@@ -149,7 +144,7 @@ class SecurityScanner {
    */
   parseOwaspReport(report) {
     const vulnerabilities = [];
-    
+
     if (report.dependencies) {
       for (const dependency of report.dependencies) {
         if (dependency.vulnerabilities) {
@@ -160,13 +155,13 @@ class SecurityScanner {
               severity: vuln.severity,
               packageName: dependency.fileName,
               cvssScore: vuln.cvssv3?.baseScore || vuln.cvssv2?.score,
-              references: vuln.references?.map(ref => ref.url) || []
+              references: vuln.references?.map((ref) => ref.url) || []
             });
           }
         }
       }
     }
-    
+
     return vulnerabilities;
   }
 
@@ -175,9 +170,9 @@ class SecurityScanner {
    */
   generateSecuritySummary(results) {
     if (!results) return '';
-    
+
     let summary = '## Security Scan Results\n\n';
-    
+
     if (results.owasp) {
       summary += '### OWASP Dependency Check\n';
       summary += `- Total Vulnerabilities: ${results.owasp.vulnerabilities}\n`;
@@ -185,7 +180,7 @@ class SecurityScanner {
       summary += `- Medium Severity: ${results.owasp.mediumSeverity}\n`;
       summary += `- Low Severity: ${results.owasp.lowSeverity}\n\n`;
     }
-    
+
     if (results.snyk) {
       summary += `### Snyk Scan\n`;
       summary += `- Total Vulnerabilities: ${results.snyk.vulnerabilities}\n`;
@@ -193,9 +188,9 @@ class SecurityScanner {
       summary += `- Medium Severity: ${results.snyk.mediumSeverity}\n`;
       summary += `- Low Severity: ${results.snyk.lowSeverity}\n\n`;
     }
-    
+
     summary += `**Total Issues Found: ${results.totalIssues}**\n`;
-    
+
     return summary;
   }
 }

@@ -22,19 +22,19 @@ class ArtifactManager {
    */
   async handleArtifacts(operation) {
     core.info('📦 Managing build artifacts...');
-    
+
     try {
       const artifactPaths = await this.collectArtifacts(operation);
-      
+
       if (artifactPaths.length > 0) {
         await this.uploadArtifacts(artifactPaths);
-        
+
         // Handle deployment if configured
         if (this.shouldDeploy(operation)) {
           await this.deployArtifacts(artifactPaths);
         }
       }
-      
+
       return artifactPaths;
     } catch (error) {
       core.warning(`Artifact management failed: ${error.message}`);
@@ -48,23 +48,23 @@ class ArtifactManager {
   async collectArtifacts(operation) {
     const targetDir = path.join(this.workingDirectory, 'target');
     const entries = fs.readdirSync(this.workingDirectory);
-    core.info(`entries: ${JSON.stringify(entries)}`)
+    core.info(`entries: ${JSON.stringify(entries)}`);
     const artifactPaths = [];
-    
+
     try {
       // Check if target directory exists
       await fs.access(targetDir);
-      
+
       // Collect JAR files
       const jarPattern = path.join(targetDir, '*.jar');
       const jarFiles = glob.sync(jarPattern);
       artifactPaths.push(...jarFiles);
-      
+
       // Collect WAR files
       const warPattern = path.join(targetDir, '*.war');
       const warFiles = glob.sync(warPattern);
       artifactPaths.push(...warFiles);
-      
+
       // Collect test reports if tests were run
       if (!core.getBooleanInput('skip-tests')) {
         const testReportsDir = path.join(targetDir, 'surefire-reports');
@@ -75,7 +75,7 @@ class ArtifactManager {
           // Test reports directory doesn't exist
         }
       }
-      
+
       // Collect coverage reports if generated
       if (core.getBooleanInput('generate-coverage')) {
         const coverageDir = path.join(targetDir, 'site', 'jacoco');
@@ -86,10 +86,9 @@ class ArtifactManager {
           // Coverage directory doesn't exist
         }
       }
-      
+
       core.info(`📋 Found ${artifactPaths.length} artifact(s)`);
       return artifactPaths;
-      
     } catch (error) {
       core.warning(`Target directory not found: ${targetDir}`);
       return [];
@@ -101,60 +100,45 @@ class ArtifactManager {
    */
   async uploadArtifacts(artifactPaths) {
     if (artifactPaths.length === 0) return;
-    
+
     core.info('⬆️ Uploading artifacts to GitHub Actions...');
-    
+
     try {
       const artifactClient = artifact.create();
-      
+
       // Upload JAR/WAR files
-      const binaryFiles = artifactPaths.filter(p => p.endsWith('.jar') || p.endsWith('.war'));
+      const binaryFiles = artifactPaths.filter((p) => p.endsWith('.jar') || p.endsWith('.war'));
       if (binaryFiles.length > 0) {
-        await artifactClient.uploadArtifact(
-          'build-artifacts',
-          binaryFiles,
-          this.workingDirectory,
-          {
-            continueOnError: false,
-            retentionDays: 30
-          }
-        );
+        await artifactClient.uploadArtifact('build-artifacts', binaryFiles, this.workingDirectory, {
+          continueOnError: false,
+          retentionDays: 30
+        });
       }
-      
+
       // Upload test reports
-      const testReportsDir = artifactPaths.find(p => p.includes('surefire-reports'));
+      const testReportsDir = artifactPaths.find((p) => p.includes('surefire-reports'));
       if (testReportsDir) {
         const testFiles = glob.sync(path.join(testReportsDir, '**/*'));
         if (testFiles.length > 0) {
-          await artifactClient.uploadArtifact(
-            'test-reports',
-            testFiles,
-            testReportsDir,
-            {
-              continueOnError: true,
-              retentionDays: 7
-            }
-          );
+          await artifactClient.uploadArtifact('test-reports', testFiles, testReportsDir, {
+            continueOnError: true,
+            retentionDays: 7
+          });
         }
       }
-      
+
       // Upload coverage reports
-      const coverageDir = artifactPaths.find(p => p.includes('jacoco'));
+      const coverageDir = artifactPaths.find((p) => p.includes('jacoco'));
       if (coverageDir) {
         const coverageFiles = glob.sync(path.join(coverageDir, '**/*'));
         if (coverageFiles.length > 0) {
-          await artifactClient.uploadArtifact(
-            'coverage-reports',
-            coverageFiles,
-            coverageDir,
-            {
-              continueOnError: true,
-              retentionDays: 7
-            }
-          );
+          await artifactClient.uploadArtifact('coverage-reports', coverageFiles, coverageDir, {
+            continueOnError: true,
+            retentionDays: 7
+          });
         }
       }
-      
+
       core.info('✅ Artifacts uploaded successfully');
     } catch (error) {
       core.warning(`Failed to upload artifacts: ${error.message}`);
@@ -169,9 +153,9 @@ class ArtifactManager {
       core.info('🚫 No deployment configuration found, skipping deployment');
       return;
     }
-    
+
     core.info(`🚀 Deploying artifacts to ${this.deployTarget}...`);
-    
+
     try {
       switch (this.deployTarget.toLowerCase()) {
         case 'nexus':
@@ -186,7 +170,7 @@ class ArtifactManager {
         default:
           throw new Error(`Unsupported deployment target: ${this.deployTarget}`);
       }
-      
+
       core.info('✅ Deployment completed successfully');
     } catch (error) {
       core.setFailed(`Deployment failed: ${error.message}`);
@@ -233,10 +217,10 @@ class ArtifactManager {
    */
   getArtifactSummary(artifactPaths) {
     if (artifactPaths.length === 0) return 'No artifacts generated';
-    
-    const jarFiles = artifactPaths.filter(p => p.endsWith('.jar'));
-    const warFiles = artifactPaths.filter(p => p.endsWith('.war'));
-    
+
+    const jarFiles = artifactPaths.filter((p) => p.endsWith('.jar'));
+    const warFiles = artifactPaths.filter((p) => p.endsWith('.war'));
+
     let summary = '';
     if (jarFiles.length > 0) {
       summary += `JAR files: ${jarFiles.length}\n`;
@@ -244,7 +228,7 @@ class ArtifactManager {
     if (warFiles.length > 0) {
       summary += `WAR files: ${warFiles.length}\n`;
     }
-    
+
     return summary.trim() || 'Artifacts generated';
   }
 }

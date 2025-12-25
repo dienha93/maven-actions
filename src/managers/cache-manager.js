@@ -33,11 +33,7 @@ class CacheManager {
       core.info(`Cache key: ${cacheKey}`);
       core.info(`Restore keys: ${restoreKeys.join(', ')}`);
 
-      const cacheHit = await cache.restoreCache(
-        [this.m2Repository],
-        cacheKey,
-        restoreKeys
-      );
+      const cacheHit = await cache.restoreCache([this.m2Repository], cacheKey, restoreKeys);
 
       if (cacheHit) {
         core.info(`✅ Cache restored from key: ${cacheHit}`);
@@ -72,7 +68,7 @@ class CacheManager {
       }
 
       const cacheKey = await this.generateCacheKey();
-      
+
       // Only save if we have a new cache key (dependencies changed)
       const existingCacheKey = core.getState('cache-key');
       if (existingCacheKey === cacheKey) {
@@ -81,10 +77,10 @@ class CacheManager {
       }
 
       await cache.saveCache([this.m2Repository], cacheKey);
-      
+
       // Store the cache key for future reference
       core.saveState('cache-key', cacheKey);
-      
+
       core.info(`✅ Cache saved with key: ${cacheKey}`);
       return true;
     } catch (error) {
@@ -142,7 +138,7 @@ class CacheManager {
    */
   async findPomFiles() {
     const pomFiles = [];
-    
+
     // Always include root pom.xml
     const rootPom = path.join(this.workingDirectory, 'pom.xml');
     if (await this.fileExists(rootPom)) {
@@ -168,16 +164,16 @@ class CacheManager {
 
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'target') {
           const subDir = path.join(dir, entry.name);
           const subPom = path.join(subDir, 'pom.xml');
-          
+
           if (await this.fileExists(subPom)) {
             pomFiles.push(subPom);
           }
-          
+
           // Recurse into subdirectory
           await this.findPomFilesRecursive(subDir, pomFiles, depth + 1);
         }
@@ -215,7 +211,7 @@ class CacheManager {
    * Get cache statistics
    */
   async getCacheStats() {
-    if (!await this.directoryExists(this.m2Repository)) {
+    if (!(await this.directoryExists(this.m2Repository))) {
       return { size: 0, files: 0 };
     }
 
@@ -225,10 +221,10 @@ class CacheManager {
 
       const calculateSize = async (dir) => {
         const entries = await fs.readdir(dir, { withFileTypes: true });
-        
+
         for (const entry of entries) {
           const fullPath = path.join(dir, entry.name);
-          
+
           if (entry.isDirectory()) {
             await calculateSize(fullPath);
           } else {
@@ -257,11 +253,11 @@ class CacheManager {
    */
   formatBytes(bytes) {
     if (bytes === 0) return '0 B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }

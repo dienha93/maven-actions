@@ -15,9 +15,9 @@ class EventProcessor {
   async processEvent() {
     const eventName = this.context.eventName;
     const payload = this.context.payload;
-    
+
     core.info(`📋 Processing GitHub event: ${eventName}`);
-    
+
     const eventContext = {
       eventName,
       payload,
@@ -52,7 +52,7 @@ class EventProcessor {
    */
   processPushEvent(eventContext) {
     const { payload } = eventContext;
-    
+
     return {
       ...eventContext,
       branch: this.extractBranchName(eventContext.ref),
@@ -74,7 +74,7 @@ class EventProcessor {
   processPullRequestEvent(eventContext) {
     const { payload } = eventContext;
     const pullRequest = payload.pull_request;
-    
+
     return {
       ...eventContext,
       action: payload.action,
@@ -100,7 +100,7 @@ class EventProcessor {
   processReleaseEvent(eventContext) {
     const { payload } = eventContext;
     const release = payload.release;
-    
+
     return {
       ...eventContext,
       action: payload.action,
@@ -123,7 +123,7 @@ class EventProcessor {
    */
   processWorkflowDispatchEvent(eventContext) {
     const { payload } = eventContext;
-    
+
     return {
       ...eventContext,
       inputs: payload.inputs || {},

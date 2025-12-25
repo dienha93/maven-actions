@@ -1,18 +1,13 @@
 # Maven Build Action
 
-A comprehensive GitHub Action for Maven projects that handles the complete build lifecycle including compilation, testing, security scanning, and deployment.
+A comprehensive GitHub Action for Maven projects that handles build operations with Maven lifecycle phases.
 
 ## Features
 
-- 🔨 **Complete Maven Lifecycle**: Support for all Maven phases (validate, compile, test, package, verify, install, deploy)
-- 🧪 **Test Processing**: Automatic test result parsing and reporting with JUnit integration
-- 📊 **Code Coverage**: JaCoCo coverage report generation and analysis
-- 🔒 **Security Scanning**: OWASP Dependency Check and Snyk vulnerability scanning
-- 📦 **Artifact Management**: Automatic artifact collection and upload
+- 🔨 **Maven Operations**: Support for Maven lifecycle operations (clean, compile, test, package, verify, install, deploy)
+- ☕ **Java Setup**: Automatic Java environment setup with configurable versions and distributions
+- 📦 **Maven Setup**: Configurable Maven version installation
 - ⚡ **Smart Caching**: Maven dependency caching for faster builds
-- 🚀 **Deployment Support**: Deploy to Nexus, Artifactory, or GitHub Packages
-- 📋 **Rich Reporting**: Detailed job summaries and GitHub Actions annotations
-- 🎯 **Event-Aware**: Intelligent behavior based on GitHub events (push, PR, release)
 
 ## Usage
 
@@ -35,7 +30,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Build with Maven
-      uses: your-username/maven-build-action@v1
+      uses: dienha93/maven-actions@v1.0.0
       with:
         operation: 'package'
         java-version: '17'
@@ -52,8 +47,6 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
-  release:
-    types: [ published ]
 
 jobs:
   build-and-test:
@@ -63,37 +56,17 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Maven Build and Test
-      uses: your-username/maven-build-action@v1
+      uses: dienha93/maven-actions@v1.0.0
       with:
         operation: 'verify'
         java-version: '17'
-        java-distribution: 'temurin'
+        java-distribution: 'corretto'
         maven-version: '3.9.5'
+        working-directory: './my-project'
+        settings-file: './.m2/settings.xml'
         cache-enabled: true
-        publish-test-results: true
-        generate-coverage: true
-        security-scan: true
-        profiles: 'ci,coverage'
-        maven-args: '-Dmaven.compiler.debug=true'
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to Repository
-      uses: your-username/maven-build-action@v1
-      with:
-        operation: 'deploy'
-        deploy-target: 'nexus'
-        deploy-url: ${{ secrets.NEXUS_URL }}
-        deploy-username: ${{ secrets.NEXUS_USERNAME }}
-        deploy-password: ${{ secrets.NEXUS_PASSWORD }}
+        force-install: false
+        maven-args: '-Dmaven.compiler.debug=true -DskipITs=false'
 ```
 
 ## Inputs
@@ -102,83 +75,36 @@ jobs:
 |-------|-------------|----------|---------|
 | `maven-version` | Maven version to use | No | `3.9.5` |
 | `java-version` | Java version to use | No | `17` |
-| `java-distribution` | Java distribution | No | `temurin` |
-| `operation` | Maven operation (validate, compile, test, package, verify, install, deploy) | Yes | `package` |
-| `skip-tests` | Skip running tests | No | `false` |
-| `working-directory` | Working directory for Maven commands | No | `.` |
-| `settings-file` | Path to Maven settings.xml | No | `` |
-| `profiles` | Maven profiles to activate (comma-separated) | No | `` |
+| `java-distribution` | Java distribution to use | No | `corretto` |
 | `maven-args` | Additional Maven arguments | No | `` |
+| `operation` | Maven operation to perform (e.g., "clean", "compile", "test", "package", "verify", "install", "deploy") | Yes | `package` |
+| `working-directory` | Working directory for Maven commands | No | `.` |
+| `settings-file` | Path to Maven settings.xml file | No | `` |
 | `cache-enabled` | Enable Maven dependency caching | No | `true` |
-| `publish-test-results` | Publish test results | No | `true` |
-| `generate-coverage` | Generate code coverage reports | No | `false` |
-| `security-scan` | Run security vulnerability scan | No | `false` |
-| `deploy-target` | Deployment target (nexus, artifactory, github-packages) | No | `` |
-| `deploy-url` | Deployment repository URL | No | `` |
-| `deploy-username` | Deployment username | No | `` |
-| `deploy-password` | Deployment password | No | `` |
+| `force-install` | Force to install Java version | No | `false` |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| `build-status` | Build status (success, failure) |
-| `test-results` | Test results summary (JSON) |
-| `coverage-percentage` | Code coverage percentage |
+| `status` | Build status (success, failure) |
 | `artifact-path` | Path to generated artifacts |
-| `security-issues` | Number of security issues found |
 | `build-time` | Total build time in seconds |
+| `java-version` | Java version used in build |
+| `maven-version` | Maven version used in build |
 
-## Event-Driven Behavior
+## Multi-Operation Support
 
-The action automatically adapts its behavior based on GitHub events:
-
-### Push Events
-- **Main/Master Branch**: Runs full build with deployment preparation
-- **Develop Branch**: Runs full build with development deployment
-- **Feature Branches**: Runs build and tests only
-- **Hotfix Branches**: Runs full build with staging deployment
-
-### Pull Request Events
-- Always runs tests and security scans
-- Publishes test results as PR comments
-- Blocks merge on test failures (if configured)
-
-### Release Events
-- Runs full build suite including security scans
-- Deploys to production repositories
-- Creates release artifacts
-
-### Scheduled Events
-- Runs comprehensive security scans
-- Updates dependency caches
-- Generates detailed reports
-
-## Security Scanning
-
-### OWASP Dependency Check
-Automatically scans for known vulnerabilities in dependencies:
+The action supports executing multiple Maven operations in sequence by providing a comma-separated list:
 
 ```yaml
-- name: Build with Security Scan
-  uses: your-username/maven-build-action@v1
+- name: Full Build Pipeline
+  uses: dienha93/maven-actions@v1.0.0
   with:
-    operation: 'verify'
-    security-scan: true
+    operation: 'clean,compile,test,package,verify'
 ```
 
-### Snyk Integration
-Requires `SNYK_TOKEN` environment variable:
-
-```yaml
-- name: Build with Snyk Scan
-  uses: your-username/maven-build-action@v1
-  with:
-    operation: 'verify'
-    security-scan: true
-  env:
-    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-```
+This will execute each operation in order, stopping if any operation fails.
 
 ## Caching
 
@@ -187,43 +113,8 @@ Maven dependencies are automatically cached to improve build performance:
 - Cache key includes OS, Java version, Maven version, and pom.xml content hashes
 - Supports multi-module projects
 - Automatic cache invalidation on dependency changes
-- Fallback cache keys for partial cache hits
+- Can be disabled by setting `cache-enabled: false`
 
-## Deployment
-
-### Nexus Repository
-
-```yaml
-- name: Deploy to Nexus
-  uses: your-username/maven-build-action@v1
-  with:
-    operation: 'deploy'
-    deploy-target: 'nexus'
-    deploy-url: 'https://nexus.example.com/repository/maven-releases/'
-    deploy-username: ${{ secrets.NEXUS_USERNAME }}
-    deploy-password: ${{ secrets.NEXUS_PASSWORD }}
-```
-
-### GitHub Packages
-
-```yaml
-- name: Deploy to GitHub Packages
-  uses: your-username/maven-build-action@v1
-  with:
-    operation: 'deploy'
-    deploy-target: 'github-packages'
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-## Multi-Module Projects
-
-The action automatically detects and handles multi-module Maven projects:
-
-- Scans for all pom.xml files in the project
-- Includes all modules in cache key calculation
-- Processes test results from all modules
-- Collects artifacts from all modules
 
 ## Troubleshooting
 
@@ -233,18 +124,14 @@ The action automatically detects and handles multi-module Maven projects:
    - Ensure pom.xml files are committed to repository
    - Check that working-directory is set correctly
 
-2. **Test Results Not Published**
-   - Verify `publish-test-results` is set to `true`
-   - Ensure tests are actually running (not skipped)
+2. **Java Version Issues**
+   - Use `force-install: true` to force Java installation
+   - Verify the Java distribution is available for your version
 
-3. **Security Scan Failures**
-   - Check SNYK_TOKEN is properly configured
-   - Verify network access to security scanning services
-
-4. **Deployment Failures**
-   - Validate deployment credentials
-   - Check repository URL and permissions
-   - Ensure artifacts are generated before deployment
+3. **Maven Operation Failures**
+   - Check Maven logs in the action output
+   - Verify all required dependencies are available
+   - Ensure proper Maven settings configuration
 
 ### Debug Mode
 
@@ -264,6 +151,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- 📖 [Documentation](https://github.com/your-username/maven-build-action/wiki)
-- 🐛 [Issue Tracker](https://github.com/your-username/maven-build-action/issues)
-- 💬 [Discussions](https://github.com/your-username/maven-build-action/discussions)
+- 🐛 [Issue Tracker](https://github.com/dienha93/maven-actions/issues)
+- 💬 [Discussions](https://github.com/dienha93/maven-actions/discussions)
